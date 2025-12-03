@@ -1,0 +1,7 @@
+{
+  "name": "Control de Alfajores",
+  "description": "Sistema integral de gestión para cafetería especializada en alfajores. Incluye TPV, inventario, activos fijos y análisis con IA.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
