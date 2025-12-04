@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, CartItem, Sale, User } from '../types';
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, ArrowRight, User as UserIcon, FileText, Printer, Send, Smartphone, Mail, X, PlusCircle } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, ArrowRight, User as UserIcon, FileText, Printer, Send, Smartphone, Mail, X, PlusCircle, Edit2 } from 'lucide-react';
 
 interface POSProps {
   products: Product[];
   currentUser: User;
   onCompleteSale: (sale: Sale) => void;
   onAddProduct: (product: Product) => void;
+  onUpdateProduct: (product: Product) => void;
 }
 
-const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddProduct }) => {
+const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddProduct, onUpdateProduct }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -26,8 +27,9 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
   const [deliveryMethod, setDeliveryMethod] = useState<'IMPRESO' | 'DIGITAL_EMAIL' | 'DIGITAL_WA' | 'NONE'>('IMPRESO');
   const [contactInfo, setContactInfo] = useState(''); // Email or Phone for delivery
 
-  // Add Product State
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  // Product Management State (Add/Edit)
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,6 +94,84 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
     }));
   };
 
+  const generateReceiptHTML = (sale: Sale) => {
+    const date = new Date(sale.date).toLocaleDateString('es-BO');
+    const time = new Date(sale.date).toLocaleTimeString('es-BO');
+
+    return `
+      <html>
+        <head>
+          <title>Comprobante de Venta</title>
+          <style>
+            body { font-family: 'Courier New', Courier, monospace; width: 300px; margin: 0 auto; padding: 20px; color: #000; }
+            .header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; }
+            .title { font-size: 1.2rem; font-weight: bold; margin: 0; }
+            .subtitle { font-size: 0.9rem; margin: 5px 0; }
+            .info { font-size: 0.8rem; margin-bottom: 5px; }
+            .client-info { border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px; font-size: 0.85rem; }
+            table { width: 100%; font-size: 0.85rem; margin-bottom: 10px; border-collapse: collapse; }
+            th { text-align: left; border-bottom: 1px solid #000; }
+            td { padding: 4px 0; }
+            .text-right { text-align: right; }
+            .totals { border-top: 1px dashed #000; padding-top: 10px; font-weight: bold; font-size: 1rem; }
+            .footer { text-align: center; font-size: 0.7rem; margin-top: 20px; border-top: 1px dashed #000; padding-top: 10px; }
+            .qr-placeholder { background: #eee; width: 100px; height: 100px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">CONTROL DE ALFAJORES</h1>
+            <p class="subtitle">Casa Matriz - La Paz</p>
+            <p class="info">NIT: 123456789</p>
+            <p class="info">Tel: 2-222222</p>
+            <p class="info">${documentType} N°: ${sale.id}</p>
+            <p class="info">Fecha: ${date} ${time}</p>
+          </div>
+
+          <div class="client-info">
+            <p><strong>Cliente:</strong> ${sale.customerName}</p>
+            ${sale.taxId ? `<p><strong>NIT/CI:</strong> ${sale.taxId}</p>` : ''}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Cant.</th>
+                <th>Detalle</th>
+                <th class="text-right">Subt.</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sale.items.map(item => `
+                <tr>
+                  <td>${item.quantity}</td>
+                  <td>${item.name}</td>
+                  <td class="text-right">${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <div class="totals">
+            <div style="display:flex; justify-content:space-between;">
+              <span>TOTAL Bs:</span>
+              <span>${sale.total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            <div class="qr-placeholder">QR FACTURA</div>
+            <p>GRACIAS POR SU PREFERENCIA</p>
+            <p>"EMITIDO POR SISTEMA WEB"</p>
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+  };
+
   const handleCheckout = () => {
     if (cart.length === 0) return;
     
@@ -123,28 +203,43 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
 
     onCompleteSale(sale);
     
-    // Simulation of Action
+    // Simulation of Action and Receipt Generation
     let message = `¡Venta registrada con éxito!\n`;
+    
     if (documentType !== 'NINGUNO') {
-        message += `Comprobante: ${documentType} generado.\n`;
-        if (deliveryMethod === 'IMPRESO') message += "🖨️ Enviando a impresora térmica...";
-        if (deliveryMethod === 'DIGITAL_WA') {
-            const waLink = `https://wa.me/${contactInfo.replace(/\D/g,'')}?text=${encodeURIComponent(`Hola ${customerName}, gracias por tu compra en Control Alfajores. Aquí tienes tu comprobante digital por $${cartTotal.toFixed(2)}.`)}`;
+        // Open PDF Print Window for all delivery types except NONE, 
+        // because even for WhatsApp the user needs the PDF file to attach it.
+        const receiptWindow = window.open('', '_blank', 'width=400,height=600');
+        if (receiptWindow) {
+            receiptWindow.document.write(generateReceiptHTML(sale));
+            receiptWindow.document.close();
+        }
+
+        if (deliveryMethod === 'IMPRESO') {
+            message += "🖨️ Enviando a impresora...";
+        } 
+        else if (deliveryMethod === 'DIGITAL_WA') {
+            // Construct detailed WA text
+            const itemsList = cart.map(i => `${i.quantity}x ${i.name}`).join(', ');
+            const waBody = `Hola *${customerName}*,\n\nGracias por tu compra en Control Alfajores.\n\n*Detalle:*\n${itemsList}\n\n*Total: Bs ${cartTotal.toFixed(2)}*\n\n📄 _Se ha generado el documento PDF en su dispositivo para que pueda guardarlo._`;
+            
+            const waLink = `https://wa.me/${contactInfo.replace(/\D/g,'')}?text=${encodeURIComponent(waBody)}`;
             window.open(waLink, '_blank');
+            message += "📱 Abriendo WhatsApp...";
         }
     }
     
-    alert(message);
+    // alert(message); // Removed alert to not block the multiple window opens
     setCart([]);
     setIsCheckoutOpen(false);
   };
 
-  const handleQuickAddProduct = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const newProduct: Product = {
-      id: Math.random().toString(36).substr(2, 9),
+    const productData: Product = {
+      id: editingProduct ? editingProduct.id : Math.random().toString(36).substr(2, 9),
       name: formData.get('name') as string,
       barcode: formData.get('barcode') as string || Math.random().toString(36).substr(2, 6).toUpperCase(),
       price: parseFloat(formData.get('price') as string),
@@ -155,13 +250,29 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
       unit: 'unid', // Default for quick add
     };
 
-    onAddProduct(newProduct);
-    setIsAddProductOpen(false);
-    
-    // Optionally ask if they want to add it to the cart immediately
-    if (window.confirm(`Producto "${newProduct.name}" creado. ¿Añadir al carrito actual?`)) {
-        addToCart(newProduct);
+    if (editingProduct) {
+        onUpdateProduct(productData);
+    } else {
+        onAddProduct(productData);
+        // Optionally ask if they want to add it to the cart immediately
+        if (window.confirm(`Producto "${productData.name}" creado. ¿Añadir al carrito actual?`)) {
+            addToCart(productData);
+        }
     }
+
+    setIsProductModalOpen(false);
+    setEditingProduct(null);
+  };
+
+  const openEditProduct = (e: React.MouseEvent, product: Product) => {
+    e.stopPropagation(); // Prevent adding to cart when clicking edit
+    setEditingProduct(product);
+    setIsProductModalOpen(true);
+  };
+
+  const openNewProduct = () => {
+    setEditingProduct(null);
+    setIsProductModalOpen(true);
   };
 
   const filteredProducts = products.filter(p => 
@@ -177,7 +288,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-coffee-900">Nueva Venta</h2>
                 <button 
-                    onClick={() => setIsAddProductOpen(true)}
+                    onClick={openNewProduct}
                     className="flex items-center gap-1 text-sm bg-coffee-100 text-coffee-700 px-3 py-2 rounded-lg hover:bg-coffee-200 transition-colors font-medium"
                 >
                     <PlusCircle className="w-4 h-4" /> Nuevo Ítem
@@ -201,25 +312,33 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
           {filteredProducts.map(product => (
-            <button
+            <div
               key={product.id}
               onClick={() => addToCart(product)}
-              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-coffee-300 transition-all text-left group flex flex-col justify-between"
+              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-coffee-300 transition-all text-left group flex flex-col justify-between cursor-pointer relative"
             >
+              <button 
+                onClick={(e) => openEditProduct(e, product)}
+                className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-coffee-600 hover:bg-coffee-50 rounded-full transition-colors z-10"
+                title="Editar Producto"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+
               <div>
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex justify-between items-start mb-2 pr-6">
                     <span className="text-xs font-semibold uppercase tracking-wider text-coffee-600 bg-coffee-50 px-2 py-1 rounded-md">{product.category}</span>
                 </div>
                 <h3 className="font-medium text-gray-800 leading-tight mb-1 group-hover:text-coffee-700">{product.name}</h3>
                 <p className="text-sm text-gray-500 mb-3">Stock: {product.stock}</p>
               </div>
               <div className="flex justify-between items-center mt-2">
-                <span className="text-lg font-bold text-coffee-800">${product.price.toFixed(2)}</span>
+                <span className="text-lg font-bold text-coffee-800">Bs {product.price.toFixed(2)}</span>
                 <div className="bg-coffee-100 p-1.5 rounded-full text-coffee-700 group-hover:bg-coffee-500 group-hover:text-white transition-colors">
                     <Plus className="w-4 h-4" />
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -244,7 +363,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
               <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-800 text-sm line-clamp-1">{item.name}</h4>
-                  <p className="text-coffee-600 font-bold text-sm">${(item.price * item.quantity).toFixed(2)}</p>
+                  <p className="text-coffee-600 font-bold text-sm">Bs {(item.price * item.quantity).toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-white rounded shadow-sm text-gray-600">
@@ -266,7 +385,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
         <div className="p-4 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex justify-between items-center mb-4 text-xl font-bold text-gray-800">
             <span>Total</span>
-            <span>${cartTotal.toFixed(2)}</span>
+            <span>Bs {cartTotal.toFixed(2)}</span>
           </div>
 
           <button
@@ -293,14 +412,14 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
                     {cart.map(item => (
                         <div key={item.id} className="flex justify-between text-sm">
                             <span className="text-gray-600">{item.quantity}x {item.name}</span>
-                            <span className="font-medium text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
+                            <span className="font-medium text-gray-900">Bs {(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                     ))}
                 </div>
                 <div className="border-t border-gray-200 pt-4">
                     <div className="flex justify-between text-xl font-bold text-coffee-800">
                         <span>Total a Pagar</span>
-                        <span>${cartTotal.toFixed(2)}</span>
+                        <span>Bs {cartTotal.toFixed(2)}</span>
                     </div>
                 </div>
             </div>
@@ -413,7 +532,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
                                     placeholder="Recibido"
                                 />
                                 {parseFloat(cashReceived || '0') >= cartTotal && (
-                                    <span className="text-green-600 font-bold">Cambio: ${changeDue.toFixed(2)}</span>
+                                    <span className="text-green-600 font-bold">Cambio: Bs {changeDue.toFixed(2)}</span>
                                 )}
                             </div>
                         )}
@@ -470,7 +589,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
                         disabled={paymentMethod === 'Efectivo' && (parseFloat(cashReceived || '0') < cartTotal)}
                         className="flex-[2] bg-coffee-600 text-white font-bold py-3 rounded-xl hover:bg-coffee-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                        Confirmar Venta (${cartTotal.toFixed(2)})
+                        Confirmar Venta (Bs {cartTotal.toFixed(2)})
                     </button>
                 </div>
             </div>
@@ -478,45 +597,45 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
         </div>
       )}
 
-      {/* Add Product Modal (Quick Add for POS) */}
-      {isAddProductOpen && (
+      {/* Add/Edit Product Modal */}
+      {isProductModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-                <button onClick={() => setIsAddProductOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                <button onClick={() => setIsProductModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
                     <X className="w-6 h-6" />
                 </button>
                 <h3 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    <PlusCircle className="w-6 h-6 text-coffee-600" />
-                    Alta Rápida de Producto
+                    {editingProduct ? <Edit2 className="w-6 h-6 text-coffee-600" /> : <PlusCircle className="w-6 h-6 text-coffee-600" />}
+                    {editingProduct ? 'Editar Producto' : 'Alta Rápida de Producto'}
                 </h3>
-                <form onSubmit={handleQuickAddProduct} className="space-y-4">
+                <form onSubmit={handleSaveProduct} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Producto</label>
-                        <input name="name" required placeholder="Ej. Alfajor Nuez" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
+                        <input name="name" required defaultValue={editingProduct?.name} placeholder="Ej. Alfajor Nuez" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta ($)</label>
-                            <input type="number" step="0.01" name="price" required className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta (Bs)</label>
+                            <input type="number" step="0.01" name="price" defaultValue={editingProduct?.price} required className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Costo ($)</label>
-                            <input type="number" step="0.01" name="cost" placeholder="(Opcional)" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Costo (Bs)</label>
+                            <input type="number" step="0.01" name="cost" defaultValue={editingProduct?.cost} placeholder="(Opcional)" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Stock Inicial</label>
-                            <input type="number" name="stock" required defaultValue="10" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
+                            <input type="number" name="stock" required defaultValue={editingProduct?.stock || 10} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Código Barra</label>
-                            <input name="barcode" placeholder="(Opcional)" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
+                            <input name="barcode" defaultValue={editingProduct?.barcode} placeholder="(Opcional)" className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-coffee-500 outline-none" />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                        <select name="category" className="w-full border rounded-lg p-2 outline-none">
+                        <select name="category" defaultValue={editingProduct?.category} className="w-full border rounded-lg p-2 outline-none">
                             <option value="Alfajor">Alfajor</option>
                             <option value="Bebida">Bebida</option>
                             <option value="Snack">Snack</option>
@@ -527,7 +646,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
                     <div className="flex gap-3 mt-6 pt-2">
                         <button 
                             type="button" 
-                            onClick={() => setIsAddProductOpen(false)}
+                            onClick={() => setIsProductModalOpen(false)}
                             className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-200 transition-colors"
                         >
                             Cancelar
@@ -536,7 +655,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
                             type="submit" 
                             className="flex-1 bg-coffee-600 text-white font-bold py-3 rounded-lg hover:bg-coffee-700 shadow-lg transition-all"
                         >
-                            Guardar Producto
+                            {editingProduct ? 'Guardar Cambios' : 'Guardar Producto'}
                         </button>
                     </div>
                 </form>

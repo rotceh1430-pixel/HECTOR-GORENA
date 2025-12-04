@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
 import Login from './components/Login';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
@@ -110,6 +109,7 @@ const App: React.FC = () => {
           currentUser={currentUser} 
           onCompleteSale={handleCompleteSale}
           onAddProduct={handleAddProduct}
+          onUpdateProduct={handleUpdateProduct}
         />
       )}
 

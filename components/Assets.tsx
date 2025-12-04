@@ -73,7 +73,7 @@ const Assets: React.FC<AssetsProps> = ({ assets, currentUser }) => {
             <div className="space-y-3 border-t border-gray-100 pt-4">
                 <div className="flex justify-between">
                     <span className="text-gray-500">Valor Libro</span>
-                    <span className="font-bold">${selectedAsset.value}</span>
+                    <span className="font-bold">Bs {selectedAsset.value}</span>
                 </div>
                 <div className="flex justify-between">
                     <span className="text-gray-500">Ubicación</span>

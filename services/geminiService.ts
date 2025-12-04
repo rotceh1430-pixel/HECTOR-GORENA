@@ -15,7 +15,7 @@ export const analyzeBusinessData = async (sales: Sale[], products: Product[]): P
     Aquí tienes los datos actuales:
     
     1. Productos con stock crítico: ${lowStock.join(', ') || 'Ninguno'}.
-    2. Ventas totales registradas recientemente: $${totalSales.toFixed(2)}.
+    2. Ventas totales registradas recientemente: Bs ${totalSales.toFixed(2)}.
     3. Cantidad de transacciones: ${sales.length}.
     
     Proporciona un análisis breve de 1 párrafo y 3 recomendaciones puntuales de marketing o gestión de inventario.

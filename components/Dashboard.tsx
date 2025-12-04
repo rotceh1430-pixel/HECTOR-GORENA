@@ -75,7 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Ventas Totales</p>
-            <p className="text-2xl font-bold text-coffee-800">${totalSales.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-coffee-800">Bs {totalSales.toFixed(2)}</p>
           </div>
           <div className="bg-green-100 p-3 rounded-full">
             <DollarSign className="w-6 h-6 text-green-600" />

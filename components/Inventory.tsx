@@ -105,8 +105,8 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
                       )}
                     </div>
                   </td>
-                  <td className="p-4 text-gray-800 font-mono">${product.price.toFixed(2)}</td>
-                  {canEdit && <td className="p-4 text-gray-500 font-mono">${product.cost.toFixed(2)}</td>}
+                  <td className="p-4 text-gray-800 font-mono">Bs {product.price.toFixed(2)}</td>
+                  {canEdit && <td className="p-4 text-gray-500 font-mono">Bs {product.cost.toFixed(2)}</td>}
                   {canEdit && (
                     <td className="p-4 text-center">
                       <button 
@@ -151,11 +151,11 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Precio Venta (Bs)</label>
                     <input type="number" step="0.01" name="price" defaultValue={editingProduct?.price} required className="w-full border rounded-lg p-2 outline-none" />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Costo (Bs)</label>
                     <input type="number" step="0.01" name="cost" defaultValue={editingProduct?.cost} required className="w-full border rounded-lg p-2 outline-none" />
                 </div>
                 <div>

@@ -37,7 +37,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
       availableProducts
         .filter(p => p.category === cat)
         .forEach(p => {
-          menuText += `• ${p.name}: $${p.price.toFixed(2)}\n`;
+          menuText += `• ${p.name}: Bs ${p.price.toFixed(2)}\n`;
         });
       menuText += "\n";
     });
@@ -157,7 +157,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
                   {order.items.map((item, idx) => (
                     <li key={idx} className="text-sm text-gray-700 flex justify-between border-b border-dashed border-gray-100 pb-1 last:border-0">
                       <span>{item.quantity}x {item.name}</span>
-                      <span className="font-mono text-gray-500">${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-mono text-gray-500">Bs {(item.price * item.quantity).toFixed(2)}</span>
                     </li>
                   ))}
                 </ul>
@@ -168,7 +168,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
                 )}
                 <div className="flex justify-between items-center font-bold text-coffee-800 text-lg border-t pt-2">
                   <span>Total</span>
-                  <span>${order.total.toFixed(2)}</span>
+                  <span>Bs {order.total.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -240,7 +240,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
                     className="flex-1 border rounded-lg p-2 outline-none"
                   >
                     {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} - ${p.price}</option>
+                      <option key={p.id} value={p.id}>{p.name} - Bs {p.price}</option>
                     ))}
                   </select>
                   <button 
@@ -258,7 +258,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
                       <div key={item.id} className="flex justify-between items-center text-sm">
                         <span>{item.quantity}x {item.name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono">${(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="font-mono">Bs {(item.price * item.quantity).toFixed(2)}</span>
                           <button type="button" onClick={() => handleRemoveItem(item.id)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
                         </div>
                       </div>
@@ -267,7 +267,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
                 </div>
                 <div className="flex justify-between items-center mt-2 font-bold text-gray-800">
                   <span>Total Estimado:</span>
-                  <span>${calculateTotal(newOrderItems).toFixed(2)}</span>
+                  <span>Bs {calculateTotal(newOrderItems).toFixed(2)}</span>
                 </div>
               </div>
 
