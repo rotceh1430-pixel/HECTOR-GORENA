@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, CartItem, Sale, User } from '../types';
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, ArrowRight, User as UserIcon, FileText, Printer, Send, Smartphone, Mail, X, PlusCircle, Edit2 } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, ArrowRight, User as UserIcon, FileText, Printer, Send, Smartphone, Mail, X, PlusCircle, Edit2, FileDown } from 'lucide-react';
 
 interface POSProps {
   products: Product[];
@@ -203,33 +203,32 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
 
     onCompleteSale(sale);
     
-    // Simulation of Action and Receipt Generation
-    let message = `¡Venta registrada con éxito!\n`;
-    
+    // Logic for Receipt Generation and Sharing
     if (documentType !== 'NINGUNO') {
-        // Open PDF Print Window for all delivery types except NONE, 
-        // because even for WhatsApp the user needs the PDF file to attach it.
-        const receiptWindow = window.open('', '_blank', 'width=400,height=600');
-        if (receiptWindow) {
-            receiptWindow.document.write(generateReceiptHTML(sale));
-            receiptWindow.document.close();
+        // Always open the Print window if Printed OR WhatsApp is selected
+        // Because for WhatsApp the user needs the PDF file anyway.
+        if (deliveryMethod === 'IMPRESO' || deliveryMethod === 'DIGITAL_WA') {
+            const receiptWindow = window.open('', '_blank', 'width=400,height=600');
+            if (receiptWindow) {
+                receiptWindow.document.write(generateReceiptHTML(sale));
+                receiptWindow.document.close();
+            }
         }
 
-        if (deliveryMethod === 'IMPRESO') {
-            message += "🖨️ Enviando a impresora...";
-        } 
-        else if (deliveryMethod === 'DIGITAL_WA') {
+        if (deliveryMethod === 'DIGITAL_WA') {
             // Construct detailed WA text
             const itemsList = cart.map(i => `${i.quantity}x ${i.name}`).join(', ');
-            const waBody = `Hola *${customerName}*,\n\nGracias por tu compra en Control Alfajores.\n\n*Detalle:*\n${itemsList}\n\n*Total: Bs ${cartTotal.toFixed(2)}*\n\n📄 _Se ha generado el documento PDF en su dispositivo para que pueda guardarlo._`;
+            const waBody = `Hola *${customerName}*,\n\nGracias por tu compra en Control Alfajores.\n\n*Detalle:*\n${itemsList}\n\n*Total: Bs ${cartTotal.toFixed(2)}*\n\n📄 _Adjunto encontrarás tu comprobante en PDF._`;
             
             const waLink = `https://wa.me/${contactInfo.replace(/\D/g,'')}?text=${encodeURIComponent(waBody)}`;
-            window.open(waLink, '_blank');
-            message += "📱 Abriendo WhatsApp...";
+            
+            // Small delay to ensure the print window opens first/concurrently without blocking
+            setTimeout(() => {
+                window.open(waLink, '_blank');
+            }, 500);
         }
     }
     
-    // alert(message); // Removed alert to not block the multiple window opens
     setCart([]);
     setIsCheckoutOpen(false);
   };
@@ -555,7 +554,7 @@ const POS: React.FC<POSProps> = ({ products, currentUser, onCompleteSale, onAddP
                                     onClick={() => setDeliveryMethod('DIGITAL_WA')}
                                     className={`flex-1 py-2 rounded-lg border text-sm flex items-center justify-center gap-2 ${deliveryMethod === 'DIGITAL_WA' ? 'bg-green-600 text-white' : 'border-gray-200 text-gray-600'}`}
                                 >
-                                    <Smartphone className="w-4 h-4" /> WhatsApp
+                                    <FileDown className="w-4 h-4" /> PDF + WhatsApp
                                 </button>
                                 <button 
                                     onClick={() => setDeliveryMethod('DIGITAL_EMAIL')}

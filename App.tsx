@@ -10,18 +10,75 @@ import { User, Product, Asset, Sale, Role, WhatsAppOrder, OrderStatus } from './
 import { INITIAL_PRODUCTS, INITIAL_ASSETS, MOCK_SALES, MOCK_WHATSAPP_ORDERS } from './constants';
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<string>('dashboard');
+  // --- PERSISTENCE LOGIC (LocalStorage) ---
   
-  // App State (Simulating DB)
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [assets, setAssets] = useState<Asset[]>(INITIAL_ASSETS);
-  const [sales, setSales] = useState<Sale[]>(MOCK_SALES);
-  const [whatsappOrders, setWhatsappOrders] = useState<WhatsAppOrder[]>(MOCK_WHATSAPP_ORDERS);
+  // 1. User Session
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('currentUser');
+    return saved ? JSON.parse(saved) : null;
+  });
 
-  // Default view based on role
+  // 2. View State
+  const [currentView, setCurrentView] = useState<string>(() => {
+    return localStorage.getItem('currentView') || 'dashboard';
+  });
+  
+  // 3. Data State (Initialize from Storage or fallback to Constants)
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('products');
+    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+  });
+
+  const [assets, setAssets] = useState<Asset[]>(() => {
+    const saved = localStorage.getItem('assets');
+    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
+  });
+
+  const [sales, setSales] = useState<Sale[]>(() => {
+    const saved = localStorage.getItem('sales');
+    return saved ? JSON.parse(saved) : MOCK_SALES;
+  });
+
+  const [whatsappOrders, setWhatsappOrders] = useState<WhatsAppOrder[]>(() => {
+    const saved = localStorage.getItem('whatsappOrders');
+    return saved ? JSON.parse(saved) : MOCK_WHATSAPP_ORDERS;
+  });
+
+  // --- SAVE TO STORAGE EFFECTS ---
+
   useEffect(() => {
     if (currentUser) {
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('currentView', currentView);
+  }, [currentView]);
+
+  useEffect(() => {
+    localStorage.setItem('products', JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('assets', JSON.stringify(assets));
+  }, [assets]);
+
+  useEffect(() => {
+    localStorage.setItem('sales', JSON.stringify(sales));
+  }, [sales]);
+
+  useEffect(() => {
+    localStorage.setItem('whatsappOrders', JSON.stringify(whatsappOrders));
+  }, [whatsappOrders]);
+
+  // --- LOGIC ---
+
+  // Default view setting logic adjusted to not overwrite saved view unless necessary
+  useEffect(() => {
+    if (currentUser && !localStorage.getItem('currentView')) {
       if (currentUser.role === Role.ADMIN) setCurrentView('dashboard');
       else if (currentUser.role === Role.CAJERO) setCurrentView('pos');
       else if (currentUser.role === Role.ALMACEN) setCurrentView('inventory');
@@ -30,10 +87,15 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    // Set default view on fresh login
+    if (user.role === Role.ADMIN) setCurrentView('dashboard');
+    else if (user.role === Role.CAJERO) setCurrentView('pos');
+    else if (user.role === Role.ALMACEN) setCurrentView('inventory');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('currentView'); // Reset view on logout
   };
 
   const handleCompleteSale = (newSale: Sale) => {
