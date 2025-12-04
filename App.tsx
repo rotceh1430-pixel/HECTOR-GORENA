@@ -98,6 +98,34 @@ const App: React.FC = () => {
     localStorage.removeItem('currentView'); // Reset view on logout
   };
 
+  // --- SMART UPDATE / SYNC LOGIC ---
+  const handleSystemUpdate = () => {
+    let addedProductsCount = 0;
+    let addedAssetsCount = 0;
+
+    // 1. Sync Products (Add new default products if missing, keep existing ones intact)
+    setProducts(currentProducts => {
+      const currentIds = new Set(currentProducts.map(p => p.id));
+      const newProducts = INITIAL_PRODUCTS.filter(p => !currentIds.has(p.id));
+      addedProductsCount = newProducts.length;
+      return [...currentProducts, ...newProducts];
+    });
+
+    // 2. Sync Assets
+    setAssets(currentAssets => {
+      const currentIds = new Set(currentAssets.map(a => a.id));
+      const newAssets = INITIAL_ASSETS.filter(a => !currentIds.has(a.id));
+      addedAssetsCount = newAssets.length;
+      return [...currentAssets, ...newAssets];
+    });
+
+    if (addedProductsCount > 0 || addedAssetsCount > 0) {
+      alert(`Sistema actualizado con éxito.\n\nSe agregaron:\n- ${addedProductsCount} productos nuevos del catálogo base.\n- ${addedAssetsCount} activos fijos nuevos.\n\nTus datos existentes y ventas NO han sido modificados.`);
+    } else {
+      alert("El sistema ya está actualizado. Tienes todos los datos base al día.");
+    }
+  };
+
   const handleCompleteSale = (newSale: Sale) => {
     setSales(prev => [...prev, newSale]);
     // Decrease stock
@@ -162,7 +190,11 @@ const App: React.FC = () => {
       onLogout={handleLogout}
     >
       {currentView === 'dashboard' && currentUser.role === Role.ADMIN && (
-        <Dashboard sales={sales} products={products} />
+        <Dashboard 
+          sales={sales} 
+          products={products} 
+          onSystemUpdate={handleSystemUpdate} 
+        />
       )}
       
       {currentView === 'pos' && (currentUser.role === Role.ADMIN || currentUser.role === Role.CAJERO) && (

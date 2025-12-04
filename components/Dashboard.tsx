@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Product, Sale } from '../types';
 import { analyzeBusinessData } from '../services/geminiService';
-import { TrendingUp, AlertTriangle, DollarSign, Package, Sparkles, Loader } from 'lucide-react';
+import { TrendingUp, AlertTriangle, DollarSign, Package, Sparkles, Loader, RefreshCw } from 'lucide-react';
 
 interface DashboardProps {
   sales: Sale[];
   products: Product[];
+  onSystemUpdate: () => void;
 }
 
 const COLORS = ['#8c6b5d', '#D4A574', '#a07e72', '#5e4339'];
 
-const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
+const Dashboard: React.FC<DashboardProps> = ({ sales, products, onSystemUpdate }) => {
   const [analysis, setAnalysis] = useState<string>('');
   const [loadingAi, setLoadingAi] = useState(false);
 
@@ -49,16 +50,26 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, products }) => {
 
   return (
     <div className="p-4 md:p-8 pb-24 space-y-6 bg-gray-50 min-h-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-3xl font-bold text-coffee-900">Dashboard Gerencial</h2>
-        <button 
-          onClick={handleAiAnalysis}
-          disabled={loadingAi}
-          className="mt-4 md:mt-0 flex items-center gap-2 bg-gradient-to-r from-coffee-500 to-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:opacity-90 transition-all disabled:opacity-50"
-        >
-          {loadingAi ? <Loader className="animate-spin w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-          {loadingAi ? 'Analizando...' : 'Analizar con IA'}
-        </button>
+        <div className="flex flex-wrap gap-3">
+            <button 
+            onClick={onSystemUpdate}
+            className="flex items-center gap-2 bg-white text-coffee-700 border border-coffee-200 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-all font-medium"
+            title="Sincronizar nuevas características sin borrar datos"
+            >
+            <RefreshCw className="w-4 h-4" />
+            Actualizar Sistema
+            </button>
+            <button 
+            onClick={handleAiAnalysis}
+            disabled={loadingAi}
+            className="flex items-center gap-2 bg-gradient-to-r from-coffee-500 to-indigo-600 text-white px-4 py-2 rounded-lg shadow hover:opacity-90 transition-all disabled:opacity-50"
+            >
+            {loadingAi ? <Loader className="animate-spin w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+            {loadingAi ? 'Analizando...' : 'Analizar con IA'}
+            </button>
+        </div>
       </div>
 
       {analysis && (
