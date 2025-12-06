@@ -83,3 +83,15 @@ export interface WhatsAppOrder {
   createdAt: string;
   notes?: string;
 }
+
+// --- KDS / Kitchen System Types ---
+export type KitchenStatus = 'PENDING' | 'DELIVERED';
+
+export interface KitchenOrder {
+  id: string;
+  tableId: string; // Or Customer Name
+  items: { name: string; quantity: number }[];
+  status: KitchenStatus;
+  timestamp: string; // ISO String
+  userId: string;
+}

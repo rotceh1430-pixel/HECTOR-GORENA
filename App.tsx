@@ -6,46 +6,79 @@ import POS from './components/POS';
 import Inventory from './components/Inventory';
 import Assets from './components/Assets';
 import WhatsAppOrders from './components/WhatsAppOrders';
+import KitchenDisplay from './components/KitchenDisplay';
+import CustomerMenu from './components/CustomerMenu';
 import { User, Product, Asset, Sale, Role, WhatsAppOrder, OrderStatus } from './types';
-import { INITIAL_PRODUCTS, INITIAL_ASSETS, MOCK_SALES, MOCK_WHATSAPP_ORDERS } from './constants';
+import { DataService } from './services/dataService';
+import { db } from './services/firebaseConfig';
+import { INITIAL_PRODUCTS, INITIAL_ASSETS, MOCK_SALES } from './constants';
 
 const App: React.FC = () => {
-  // --- PERSISTENCE LOGIC (LocalStorage) ---
-  
-  // 1. User Session
+  // --- SESSION STATE ---
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('currentUser');
     return saved ? JSON.parse(saved) : null;
   });
 
-  // 2. View State
   const [currentView, setCurrentView] = useState<string>(() => {
     return localStorage.getItem('currentView') || 'dashboard';
   });
-  
-  // 3. Data State (Initialize from Storage or fallback to Constants)
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('products');
-    return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
-  });
 
-  const [assets, setAssets] = useState<Asset[]>(() => {
-    const saved = localStorage.getItem('assets');
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
-  });
+  // --- DATA STATE (Managed by Firebase Subscriptions) ---
+  const [products, setProducts] = useState<Product[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [whatsappOrders, setWhatsappOrders] = useState<WhatsAppOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
 
-  const [sales, setSales] = useState<Sale[]>(() => {
-    const saved = localStorage.getItem('sales');
-    return saved ? JSON.parse(saved) : MOCK_SALES;
-  });
+  // --- CUSTOMER MODE CHECK ---
+  const [isCustomerMode, setIsCustomerMode] = useState(false);
+  const [customerTableId, setCustomerTableId] = useState('0');
 
-  const [whatsappOrders, setWhatsappOrders] = useState<WhatsAppOrder[]>(() => {
-    const saved = localStorage.getItem('whatsappOrders');
-    return saved ? JSON.parse(saved) : MOCK_WHATSAPP_ORDERS;
-  });
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'customer') {
+        setIsCustomerMode(true);
+        setCustomerTableId(params.get('table') || '0');
+    }
+  }, []);
 
-  // --- SAVE TO STORAGE EFFECTS ---
+  // --- FIREBASE SUBSCRIPTIONS ---
+  useEffect(() => {
+    // Listen for connection errors dispatched by DataService
+    const handleFirebaseError = (e: any) => {
+        setFirebaseError(e.detail);
+    };
+    window.addEventListener('firebase_error', handleFirebaseError);
 
+    // Only subscribe if not in customer mode (or even in customer mode we need products)
+    if (!db) {
+        // Fallback for when API keys are missing in demo
+        setProducts(INITIAL_PRODUCTS);
+        setSales(MOCK_SALES);
+        setAssets(INITIAL_ASSETS);
+        setLoading(false);
+        return () => window.removeEventListener('firebase_error', handleFirebaseError);
+    }
+
+    const unsubProducts = DataService.subscribeProducts(setProducts);
+    const unsubSales = DataService.subscribeSales(setSales);
+    const unsubAssets = DataService.subscribeAssets(setAssets);
+    const unsubWA = DataService.subscribeWhatsAppOrders(setWhatsappOrders);
+
+    setLoading(false);
+
+    return () => {
+      unsubProducts();
+      unsubSales();
+      unsubAssets();
+      unsubWA();
+      window.removeEventListener('firebase_error', handleFirebaseError);
+    };
+  }, []);
+
+  // --- PERSISTENCE EFFECTS (Only User Session) ---
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -58,36 +91,10 @@ const App: React.FC = () => {
     localStorage.setItem('currentView', currentView);
   }, [currentView]);
 
-  useEffect(() => {
-    localStorage.setItem('products', JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem('assets', JSON.stringify(assets));
-  }, [assets]);
-
-  useEffect(() => {
-    localStorage.setItem('sales', JSON.stringify(sales));
-  }, [sales]);
-
-  useEffect(() => {
-    localStorage.setItem('whatsappOrders', JSON.stringify(whatsappOrders));
-  }, [whatsappOrders]);
-
-  // --- LOGIC ---
-
-  // Default view setting logic adjusted to not overwrite saved view unless necessary
-  useEffect(() => {
-    if (currentUser && !localStorage.getItem('currentView')) {
-      if (currentUser.role === Role.ADMIN) setCurrentView('dashboard');
-      else if (currentUser.role === Role.CAJERO) setCurrentView('pos');
-      else if (currentUser.role === Role.ALMACEN) setCurrentView('inventory');
-    }
-  }, [currentUser]);
+  // --- HANDLERS ---
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    // Set default view on fresh login
     if (user.role === Role.ADMIN) setCurrentView('dashboard');
     else if (user.role === Role.CAJERO) setCurrentView('pos');
     else if (user.role === Role.ALMACEN) setCurrentView('inventory');
@@ -95,50 +102,26 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('currentView'); // Reset view on logout
+    localStorage.removeItem('currentView');
   };
 
-  // --- SMART UPDATE / SYNC LOGIC ---
   const handleSystemUpdate = () => {
-    let addedProductsCount = 0;
-    let addedAssetsCount = 0;
-
-    setProducts(currentProducts => {
-      const currentIds = new Set(currentProducts.map(p => p.id));
-      const newProducts = INITIAL_PRODUCTS.filter(p => !currentIds.has(p.id));
-      addedProductsCount = newProducts.length;
-      return [...currentProducts, ...newProducts];
-    });
-
-    setAssets(currentAssets => {
-      const currentIds = new Set(currentAssets.map(a => a.id));
-      const newAssets = INITIAL_ASSETS.filter(a => !currentIds.has(a.id));
-      addedAssetsCount = newAssets.length;
-      return [...currentAssets, ...newAssets];
-    });
-
-    if (addedProductsCount > 0 || addedAssetsCount > 0) {
-      alert(`Sistema actualizado con éxito.\n\nSe agregaron:\n- ${addedProductsCount} productos nuevos del catálogo base.\n- ${addedAssetsCount} activos fijos nuevos.\n\nTus datos existentes y ventas NO han sido modificados.`);
+    if (products.length === 0) {
+        if(window.confirm("¿Deseas inicializar la base de datos en la nube con los productos de ejemplo?")) {
+            DataService.seedProducts();
+        }
     } else {
-      alert("El sistema ya está actualizado. Tienes todos los datos base al día.");
+        alert("El sistema está conectado a la nube y sincronizado.");
     }
   };
 
-  // --- DATA EXPORT / IMPORT LOGIC ---
   const handleExportData = () => {
-    const data = {
-      timestamp: new Date().toISOString(),
-      products,
-      sales,
-      assets,
-      whatsappOrders
-    };
-    
+    const data = { timestamp: new Date().toISOString(), products, sales, assets, whatsappOrders };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `control_alfajores_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `control_alfajores_cloud_backup.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -146,46 +129,21 @@ const App: React.FC = () => {
   };
 
   const handleImportData = (jsonData: string) => {
-    try {
-      const data = JSON.parse(jsonData);
-      
-      // Basic validation
-      if (!data.products || !data.sales) {
-        throw new Error("Formato de archivo inválido.");
-      }
-
-      // Update State
-      if (data.products) setProducts(data.products);
-      if (data.sales) setSales(data.sales);
-      if (data.assets) setAssets(data.assets);
-      if (data.whatsappOrders) setWhatsappOrders(data.whatsappOrders);
-
-      alert("Base de datos importada correctamente. La aplicación está actualizada.");
-    } catch (error) {
-      console.error(error);
-      alert("Error al importar: El archivo no es válido.");
-    }
+     alert("La importación masiva está deshabilitada en modo Cloud para prevenir sobrescritura de datos en tiempo real.");
   };
+
+  // --- CRUD WRAPPERS ---
 
   const handleCompleteSale = (newSale: Sale) => {
-    setSales(prev => [...prev, newSale]);
-    // Decrease stock
-    setProducts(prevProducts => prevProducts.map(p => {
-      const soldItem = newSale.items.find(i => i.id === p.id);
-      if (soldItem) {
-        return { ...p, stock: p.stock - soldItem.quantity };
-      }
-      return p;
-    }));
+    DataService.addSale(newSale, products);
   };
 
-  // WhatsApp Module Handlers
   const handleAddWhatsAppOrder = (order: WhatsAppOrder) => {
-    setWhatsappOrders(prev => [order, ...prev]);
+    DataService.addWhatsAppOrder(order);
   };
 
   const handleUpdateWhatsAppStatus = (orderId: string, status: OrderStatus) => {
-    setWhatsappOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    DataService.updateWhatsAppStatus(orderId, status);
   };
 
   const handleFinalizeWhatsAppOrder = (order: WhatsAppOrder) => {
@@ -199,20 +157,26 @@ const App: React.FC = () => {
       customerName: order.customerName,
       documentType: 'RECIBO'
     };
-
-    handleCompleteSale(newSale);
-    handleUpdateWhatsAppStatus(order.id, 'ENTREGADO');
-    alert(`Pedido de ${order.customerName} registrado como venta y stock actualizado.`);
+    // Add sale and update stock via DataService
+    DataService.addSale(newSale, products);
+    // Mark order as delivered
+    DataService.updateWhatsAppStatus(order.id, 'ENTREGADO');
+    alert(`Pedido de ${order.customerName} registrado y sincronizado en la nube.`);
   };
 
-
   const handleUpdateProduct = (updatedProduct: Product) => {
-    setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    DataService.updateProduct(updatedProduct);
   };
 
   const handleAddProduct = (newProduct: Product) => {
-    setProducts(prev => [...prev, newProduct]);
+    DataService.addProduct(newProduct);
   };
+
+  // --- RENDER ---
+
+  if (isCustomerMode) {
+    return <CustomerMenu products={products} tableId={customerTableId} />;
+  }
 
   if (!currentUser) {
     return <Login onLogin={handleLogin} />;
@@ -225,12 +189,23 @@ const App: React.FC = () => {
       onChangeView={setCurrentView} 
       onLogout={handleLogout}
     >
+      {/* Configuration Warnings */}
+      <div className="flex flex-col">
+        {!db && (
+            <div className="bg-red-500 text-white p-2 text-center text-sm font-bold animate-pulse">
+                ⚠️ MODO DEMO: Configura firebaseConfig.ts para activar la base de datos real.
+            </div>
+        )}
+        {firebaseError && (
+            <div className="bg-orange-500 text-white p-2 text-center text-sm font-bold flex justify-center items-center gap-2">
+                <span>⚠️ {firebaseError}</span>
+                <button onClick={() => setFirebaseError(null)} className="underline opacity-80 hover:opacity-100">Cerrar</button>
+            </div>
+        )}
+      </div>
+
       {currentView === 'dashboard' && currentUser.role === Role.ADMIN && (
-        <Dashboard 
-          sales={sales} 
-          products={products} 
-          onSystemUpdate={handleSystemUpdate} 
-        />
+        <Dashboard sales={sales} products={products} onSystemUpdate={handleSystemUpdate} />
       )}
       
       {currentView === 'pos' && (currentUser.role === Role.ADMIN || currentUser.role === Role.CAJERO) && (
@@ -243,6 +218,10 @@ const App: React.FC = () => {
           onExportData={handleExportData}
           onImportData={handleImportData}
         />
+      )}
+
+      {currentView === 'kitchen' && (currentUser.role === Role.ADMIN || currentUser.role === Role.CAJERO) && (
+        <KitchenDisplay />
       )}
 
       {currentView === 'whatsapp' && (

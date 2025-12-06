@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Product, CartItem, Sale, User, ProductCategory } from '../types';
+import { KitchenService } from '../services/kitchenService';
 import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, QrCode, ArrowRight, User as UserIcon, FileText, Printer, Send, Smartphone, Mail, X, PlusCircle, Edit2, FileDown, Upload, Download, RefreshCw, Image as ImageIcon, Camera, ScanBarcode } from 'lucide-react';
 
 // Declare Html5Qrcode library from global scope (added via script tag in index.html)
@@ -60,6 +61,10 @@ const POS: React.FC<POSProps> = ({
   // Scanner State
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
+
+  // Table QR Gen State
+  const [isQrGenOpen, setIsQrGenOpen] = useState(false);
+  const [qrTableId, setQrTableId] = useState('1');
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -306,6 +311,15 @@ const POS: React.FC<POSProps> = ({
 
     onCompleteSale(sale);
     
+    // --- INTEGRACIÓN KDS (Cocina) ---
+    // Enviar pedido automáticamente a cocina
+    KitchenService.addOrder({
+        tableId: customerName || 'Mostrador', // Si fuera un restaurante, aquí va el # de mesa
+        items: cart.map(item => ({ name: item.name, quantity: item.quantity })),
+        userId: currentUser.id
+    });
+    // -------------------------------
+
     if (documentType !== 'NINGUNO') {
         if (deliveryMethod === 'IMPRESO' || deliveryMethod === 'DIGITAL_WA') {
             const receiptWindow = window.open('', '_blank', 'width=400,height=600');
@@ -400,6 +414,13 @@ const POS: React.FC<POSProps> = ({
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-coffee-900">Punto de Venta</h2>
                 <div className="flex gap-2">
+                     <button 
+                        onClick={() => setIsQrGenOpen(true)}
+                        className="flex items-center gap-1 text-sm bg-coffee-600 text-white px-3 py-2 rounded-lg hover:bg-coffee-700 transition-colors font-medium shadow-sm"
+                        title="Generar QR para Mesa"
+                    >
+                        <QrCode className="w-4 h-4" /> QR Mesa
+                    </button>
                     <button 
                         onClick={() => setIsSyncModalOpen(true)}
                         className="flex items-center gap-1 text-sm bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium shadow-sm"
@@ -554,6 +575,47 @@ const POS: React.FC<POSProps> = ({
           </button>
         </div>
       </div>
+
+      {/* --- QR Generator Modal --- */}
+      {isQrGenOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+                <button onClick={() => setIsQrGenOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <X className="w-6 h-6" />
+                </button>
+                <h3 className="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                    <QrCode className="w-6 h-6 text-coffee-600" />
+                    QR Menú Digital
+                </h3>
+                
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Número de Mesa</label>
+                    <input 
+                        type="number" 
+                        value={qrTableId} 
+                        onChange={e => setQrTableId(e.target.value)}
+                        className="w-full border rounded-lg p-2 text-center text-xl font-bold focus:ring-2 focus:ring-coffee-500 outline-none" 
+                    />
+                </div>
+
+                <div className="flex flex-col items-center justify-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4">
+                     <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(window.location.origin + window.location.pathname + '?view=customer&table=' + qrTableId)}`} 
+                        alt="QR Code" 
+                        className="w-48 h-48"
+                    />
+                    <p className="text-xs text-gray-500 mt-2 text-center">Escanea este código para ver el menú y pedir desde la mesa.</p>
+                </div>
+
+                <button 
+                    onClick={() => window.open(`?view=customer&table=${qrTableId}`, '_blank')}
+                    className="w-full bg-coffee-600 text-white font-bold py-2 rounded-lg hover:bg-coffee-700 transition-colors flex items-center justify-center gap-2"
+                >
+                    <Smartphone className="w-4 h-4" /> Abrir Link en Pestaña
+                </button>
+            </div>
+        </div>
+      )}
 
       {/* --- Scanner Modal --- */}
       {isCameraScannerOpen && (
