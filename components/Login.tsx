@@ -40,8 +40,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="bg-coffee-500 p-4 rounded-full mb-4">
             <Coffee className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-coffee-900">Control de Alfajores</h1>
-          <p className="text-gray-500">Sistema de Gestión</p>
+          {/* Branding Update: Dulce Mimo (28px Bold) & Café & Alfajores (20px Normal) */}
+          <h1 className="text-[28px] font-bold text-coffee-900 leading-tight">Dulce Mimo</h1>
+          <p className="text-[20px] font-normal text-gray-600">Café & Alfajores</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

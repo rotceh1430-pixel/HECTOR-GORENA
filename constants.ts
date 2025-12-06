@@ -7,12 +7,90 @@ export const MOCK_USERS: User[] = [
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [
-  { id: 'p1', name: 'Alfajor de Maicena', barcode: '779001', price: 2.50, cost: 0.80, stock: 50, minStock: 20, category: 'Alfajor', unit: 'unid' },
-  { id: 'p2', name: 'Alfajor Chocolate Negro', barcode: '779002', price: 3.00, cost: 1.20, stock: 15, minStock: 20, category: 'Alfajor', unit: 'unid' },
-  { id: 'p3', name: 'Alfajor Chocolate Blanco', barcode: '779003', price: 3.00, cost: 1.20, stock: 30, minStock: 15, category: 'Alfajor', unit: 'unid' },
-  { id: 'p4', name: 'Café Espresso', barcode: '990001', price: 2.00, cost: 0.50, stock: 500, minStock: 100, category: 'Bebida', unit: 'taza' },
-  { id: 'p5', name: 'Capuchino', barcode: '990002', price: 3.50, cost: 0.90, stock: 450, minStock: 100, category: 'Bebida', unit: 'taza' },
-  { id: 'p6', name: 'Medialuna', barcode: '880001', price: 1.50, cost: 0.40, stock: 10, minStock: 24, category: 'Snack', unit: 'unid' },
+  { 
+    id: 'p1', 
+    name: 'Alfajor de Maicena', 
+    barcode: '779001', 
+    price: 2.50, 
+    cost: 0.80, 
+    stock: 50, 
+    minStock: 20, 
+    category: 'Alfajores artesanales', 
+    unit: 'unid',
+    image: 'https://images.unsplash.com/photo-1598514983088-254e4c29792e?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  { 
+    id: 'p2', 
+    name: 'Alfajor Chocolate Negro', 
+    barcode: '779002', 
+    price: 3.00, 
+    cost: 1.20, 
+    stock: 15, 
+    minStock: 20, 
+    category: 'Alfajores artesanales', 
+    unit: 'unid',
+    image: 'https://images.unsplash.com/photo-1621252062325-1158c56e30de?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  { 
+    id: 'p3', 
+    name: 'Tarta de Frutilla', 
+    barcode: '779003', 
+    price: 15.00, 
+    cost: 8.00, 
+    stock: 5, 
+    minStock: 2, 
+    category: 'Pasteleria', 
+    unit: 'porción',
+    image: 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  { 
+    id: 'p4', 
+    name: 'Café Espresso', 
+    barcode: '990001', 
+    price: 10.00, 
+    cost: 3.50, 
+    stock: 500, 
+    minStock: 100, 
+    category: 'Bebidas calientes', 
+    unit: 'taza',
+    image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  { 
+    id: 'p5', 
+    name: 'Capuchino', 
+    barcode: '990002', 
+    price: 14.00, 
+    cost: 4.90, 
+    stock: 450, 
+    minStock: 100, 
+    category: 'Bebidas calientes', 
+    unit: 'taza',
+    image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  { 
+    id: 'p6', 
+    name: 'Empanada de Carne', 
+    barcode: '880001', 
+    price: 8.50, 
+    cost: 3.40, 
+    stock: 24, 
+    minStock: 10, 
+    category: 'Snacks salados', 
+    unit: 'unid',
+    image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
+  { 
+    id: 'p7', 
+    name: 'Frappé de Moca', 
+    barcode: '990003', 
+    price: 18.00, 
+    cost: 6.00, 
+    stock: 100, 
+    minStock: 20, 
+    category: 'Bebidas frías', 
+    unit: 'vaso',
+    image: 'https://images.unsplash.com/photo-1577805947697-89e18249d767?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3'
+  },
 ];
 
 export const INITIAL_ASSETS: Asset[] = [
@@ -66,20 +144,9 @@ export const MOCK_WHATSAPP_ORDERS: WhatsAppOrder[] = [
       { ...INITIAL_PRODUCTS[0], quantity: 6 },
       { ...INITIAL_PRODUCTS[3], quantity: 1 }
     ],
-    total: 17.00,
+    total: 25.00,
     status: 'PENDIENTE',
     createdAt: new Date().toISOString(),
     notes: 'Sin azúcar en el café'
   },
-  {
-    id: 'w2',
-    customerName: 'Juan Perez',
-    phoneNumber: '+5491187654321',
-    items: [
-      { ...INITIAL_PRODUCTS[1], quantity: 12 }
-    ],
-    total: 36.00,
-    status: 'LISTO',
-    createdAt: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
-  }
 ];

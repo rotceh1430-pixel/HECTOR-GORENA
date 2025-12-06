@@ -12,6 +12,14 @@ export interface User {
   password?: string; // In a real app, never store plain text
 }
 
+export type ProductCategory = 
+  | 'Alfajores artesanales' 
+  | 'Pasteleria' 
+  | 'Snacks salados' 
+  | 'Bebidas calientes' 
+  | 'Bebidas frías' 
+  | 'Otro';
+
 export interface Product {
   id: string;
   name: string;
@@ -20,8 +28,9 @@ export interface Product {
   cost: number;
   stock: number;
   minStock: number;
-  category: 'Alfajor' | 'Bebida' | 'Snack' | 'Otro';
+  category: ProductCategory;
   unit: string;
+  image?: string; // Base64 or URL
 }
 
 export interface CartItem extends Product {

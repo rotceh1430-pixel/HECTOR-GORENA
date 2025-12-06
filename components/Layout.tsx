@@ -41,11 +41,11 @@ const Layout: React.FC<LayoutProps> = ({ currentUser, currentView, onChangeView,
       <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 p-4 h-full">
         <div className="flex items-center gap-3 px-2 mb-8 mt-2">
           <div className="w-8 h-8 bg-coffee-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold">CA</span>
+            <span className="text-white font-bold text-xs">DM</span>
           </div>
           <div>
-            <h1 className="font-bold text-gray-800 leading-none">Control</h1>
-            <span className="text-xs text-coffee-600 font-semibold tracking-wider">ALFAJORES</span>
+            <h1 className="font-bold text-gray-800 leading-none text-base">Dulce Mimo</h1>
+            <span className="text-[10px] text-coffee-600 font-normal block">Café & Alfajores</span>
           </div>
         </div>
 
@@ -79,7 +79,10 @@ const Layout: React.FC<LayoutProps> = ({ currentUser, currentView, onChangeView,
       {/* Mobile Header & Overlay */}
       <div className="flex-1 flex flex-col h-full w-full relative">
         <header className="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center z-20">
-            <div className="font-bold text-coffee-800">Control Alfajores</div>
+            <div className="flex flex-col">
+                <div className="font-bold text-coffee-800 text-base">Dulce Mimo</div>
+                <div className="text-[10px] text-coffee-600">Café & Alfajores</div>
+            </div>
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 bg-gray-100 rounded-lg">
                 <Menu className="w-6 h-6 text-gray-700" />
             </button>

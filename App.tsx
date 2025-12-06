@@ -103,7 +103,6 @@ const App: React.FC = () => {
     let addedProductsCount = 0;
     let addedAssetsCount = 0;
 
-    // 1. Sync Products (Add new default products if missing, keep existing ones intact)
     setProducts(currentProducts => {
       const currentIds = new Set(currentProducts.map(p => p.id));
       const newProducts = INITIAL_PRODUCTS.filter(p => !currentIds.has(p.id));
@@ -111,7 +110,6 @@ const App: React.FC = () => {
       return [...currentProducts, ...newProducts];
     });
 
-    // 2. Sync Assets
     setAssets(currentAssets => {
       const currentIds = new Set(currentAssets.map(a => a.id));
       const newAssets = INITIAL_ASSETS.filter(a => !currentIds.has(a.id));
@@ -123,6 +121,49 @@ const App: React.FC = () => {
       alert(`Sistema actualizado con éxito.\n\nSe agregaron:\n- ${addedProductsCount} productos nuevos del catálogo base.\n- ${addedAssetsCount} activos fijos nuevos.\n\nTus datos existentes y ventas NO han sido modificados.`);
     } else {
       alert("El sistema ya está actualizado. Tienes todos los datos base al día.");
+    }
+  };
+
+  // --- DATA EXPORT / IMPORT LOGIC ---
+  const handleExportData = () => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      products,
+      sales,
+      assets,
+      whatsappOrders
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `control_alfajores_backup_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (jsonData: string) => {
+    try {
+      const data = JSON.parse(jsonData);
+      
+      // Basic validation
+      if (!data.products || !data.sales) {
+        throw new Error("Formato de archivo inválido.");
+      }
+
+      // Update State
+      if (data.products) setProducts(data.products);
+      if (data.sales) setSales(data.sales);
+      if (data.assets) setAssets(data.assets);
+      if (data.whatsappOrders) setWhatsappOrders(data.whatsappOrders);
+
+      alert("Base de datos importada correctamente. La aplicación está actualizada.");
+    } catch (error) {
+      console.error(error);
+      alert("Error al importar: El archivo no es válido.");
     }
   };
 
@@ -148,24 +189,19 @@ const App: React.FC = () => {
   };
 
   const handleFinalizeWhatsAppOrder = (order: WhatsAppOrder) => {
-    // 1. Create Sale from Order
     const newSale: Sale = {
       id: Math.random().toString(36).substr(2, 9),
       date: new Date().toISOString(),
       items: order.items,
       total: order.total,
-      paymentMethod: 'Efectivo', // Defaulting to Cash for WA orders upon pickup/delivery
+      paymentMethod: 'Efectivo', 
       cashierName: currentUser?.name || 'Sistema WA',
       customerName: order.customerName,
       documentType: 'RECIBO'
     };
 
-    // 2. Register Sale (updates stock)
     handleCompleteSale(newSale);
-
-    // 3. Mark Order as Delivered/Archived
     handleUpdateWhatsAppStatus(order.id, 'ENTREGADO');
-    
     alert(`Pedido de ${order.customerName} registrado como venta y stock actualizado.`);
   };
 
@@ -204,6 +240,8 @@ const App: React.FC = () => {
           onCompleteSale={handleCompleteSale}
           onAddProduct={handleAddProduct}
           onUpdateProduct={handleUpdateProduct}
+          onExportData={handleExportData}
+          onImportData={handleImportData}
         />
       )}
 

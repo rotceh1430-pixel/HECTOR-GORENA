@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Product, Role, User } from '../types';
-import { Edit2, AlertTriangle, Search, Plus, Archive } from 'lucide-react';
+import { Product, Role, User, ProductCategory } from '../types';
+import { Edit2, AlertTriangle, Search, Plus, Archive, Image as ImageIcon } from 'lucide-react';
 
 interface InventoryProps {
   products: Product[];
@@ -9,10 +9,20 @@ interface InventoryProps {
   onAddProduct: (product: Product) => void;
 }
 
+const CATEGORIES: ProductCategory[] = [
+    'Alfajores artesanales', 
+    'Pasteleria', 
+    'Snacks salados', 
+    'Bebidas calientes', 
+    'Bebidas frías',
+    'Otro'
+];
+
 const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdateProduct, onAddProduct }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [imageBase64, setImageBase64] = useState<string>('');
 
   const canEdit = currentUser.role === Role.ADMIN || currentUser.role === Role.ALMACEN;
 
@@ -21,20 +31,38 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    // Safety check for empty numeric values to avoid NaN
+    const price = parseFloat(formData.get('price') as string);
+    const cost = parseFloat(formData.get('cost') as string);
+    const stock = parseInt(formData.get('stock') as string);
+    const minStock = parseInt(formData.get('minStock') as string);
+
     const newProduct: Product = {
       id: editingProduct ? editingProduct.id : Math.random().toString(36).substr(2, 9),
       name: formData.get('name') as string,
       barcode: formData.get('barcode') as string,
-      price: parseFloat(formData.get('price') as string),
-      cost: parseFloat(formData.get('cost') as string),
-      stock: parseInt(formData.get('stock') as string),
-      minStock: parseInt(formData.get('minStock') as string),
+      price: isNaN(price) ? 0 : price,
+      cost: isNaN(cost) ? 0 : cost,
+      stock: isNaN(stock) ? 0 : stock,
+      minStock: isNaN(minStock) ? 5 : minStock,
       category: formData.get('category') as any,
       unit: formData.get('unit') as string,
+      image: imageBase64 || editingProduct?.image
     };
 
     if (editingProduct) {
@@ -44,6 +72,12 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
     }
     setEditingProduct(null);
     setIsAdding(false);
+    setImageBase64('');
+  };
+
+  const openEdit = (product: Product) => {
+    setEditingProduct(product);
+    setImageBase64(product.image || '');
   };
 
   return (
@@ -53,7 +87,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
         
         {canEdit && (
           <button 
-            onClick={() => { setEditingProduct(null); setIsAdding(true); }}
+            onClick={() => { setEditingProduct(null); setImageBase64(''); setIsAdding(true); }}
             className="bg-coffee-600 text-white px-4 py-2 rounded-lg shadow hover:bg-coffee-700 flex items-center gap-2 transition-colors"
           >
             <Plus className="w-4 h-4" /> Nuevo Producto
@@ -77,6 +111,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
           <table className="w-full text-left">
             <thead className="bg-coffee-50 text-coffee-800 uppercase text-xs font-semibold tracking-wider">
               <tr>
+                <th className="p-4">Imagen</th>
                 <th className="p-4">Producto</th>
                 <th className="p-4">Categoría</th>
                 <th className="p-4">Stock</th>
@@ -88,6 +123,13 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
             <tbody className="divide-y divide-gray-100">
               {filteredProducts.map(product => (
                 <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4">
+                      {product.image ? (
+                          <img src={product.image} alt={product.name} className="w-10 h-10 object-cover rounded-md border border-gray-200" />
+                      ) : (
+                          <div className="w-10 h-10 bg-gray-100 rounded-md flex items-center justify-center text-gray-400"><ImageIcon className="w-5 h-5" /></div>
+                      )}
+                  </td>
                   <td className="p-4">
                     <div className="font-medium text-gray-900">{product.name}</div>
                     <div className="text-xs text-gray-400 font-mono">{product.barcode}</div>
@@ -110,7 +152,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
                   {canEdit && (
                     <td className="p-4 text-center">
                       <button 
-                        onClick={() => setEditingProduct(product)}
+                        onClick={() => openEdit(product)}
                         className="text-coffee-600 hover:bg-coffee-100 p-2 rounded-full transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -127,11 +169,25 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
       {/* Modal for Add/Edit */}
       {(isAdding || editingProduct) && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4 text-gray-800">
               {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
             </h3>
             <form onSubmit={handleSave} className="space-y-4">
+              <div className="flex justify-center mb-4">
+                  <label className="cursor-pointer group relative w-32 h-32 rounded-xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-coffee-500 transition-colors">
+                      {imageBase64 ? (
+                          <img src={imageBase64} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                          <div className="text-center text-gray-400">
+                              <ImageIcon className="w-8 h-8 mx-auto mb-1" />
+                              <span className="text-xs">Subir Foto</span>
+                          </div>
+                      )}
+                      <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  </label>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
@@ -143,11 +199,10 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
-                    <select name="category" defaultValue={editingProduct?.category || 'Alfajor'} className="w-full border rounded-lg p-2 outline-none">
-                        <option value="Alfajor">Alfajor</option>
-                        <option value="Bebida">Bebida</option>
-                        <option value="Snack">Snack</option>
-                        <option value="Otro">Otro</option>
+                    <select name="category" defaultValue={editingProduct?.category || CATEGORIES[0]} className="w-full border rounded-lg p-2 outline-none">
+                        {CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
                     </select>
                 </div>
                 <div>
@@ -174,7 +229,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
               <div className="flex justify-end gap-3 mt-6">
                 <button 
                   type="button" 
-                  onClick={() => { setEditingProduct(null); setIsAdding(false); }}
+                  onClick={() => { setEditingProduct(null); setIsAdding(false); setImageBase64(''); }}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                 >
                   Cancelar
