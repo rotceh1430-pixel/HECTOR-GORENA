@@ -62,7 +62,7 @@ const Inventory: React.FC<InventoryProps> = ({ products, currentUser, onUpdatePr
       minStock: isNaN(minStock) ? 5 : minStock,
       category: formData.get('category') as any,
       unit: formData.get('unit') as string,
-      image: imageBase64 || editingProduct?.image
+      image: imageBase64 || editingProduct?.image || '' // Ensure string, not undefined
     };
 
     if (editingProduct) {

@@ -18,6 +18,16 @@ const handleFirestoreError = (error: any, context: string) => {
     }
 };
 
+// Helper to remove undefined values (Firestore rejects them)
+const cleanPayload = (data: any) => {
+    return Object.entries(data).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+            acc[key] = value;
+        }
+        return acc;
+    }, {} as any);
+};
+
 export const DataService = {
   // --- PRODUCTS ---
   subscribeProducts: (callback: (products: Product[]) => void) => {
@@ -27,9 +37,22 @@ export const DataService = {
             const stored = localStorage.getItem('products');
             callback(stored ? JSON.parse(stored) : INITIAL_PRODUCTS);
         };
+        
         loadLocal(); // Initial load
+
+        // Listener for same-tab updates
         window.addEventListener('local_update_products', loadLocal);
-        return () => window.removeEventListener('local_update_products', loadLocal);
+        
+        // Listener for cross-tab updates (when user changes data in another tab)
+        const storageListener = (e: StorageEvent) => {
+            if (e.key === 'products') loadLocal();
+        };
+        window.addEventListener('storage', storageListener);
+
+        return () => {
+            window.removeEventListener('local_update_products', loadLocal);
+            window.removeEventListener('storage', storageListener);
+        };
     }
     
     // Firebase
@@ -49,7 +72,7 @@ export const DataService = {
         return;
     }
     const { id, ...data } = product;
-    await addDoc(collection(db, 'products'), data);
+    await addDoc(collection(db, 'products'), cleanPayload(data));
   },
 
   updateProduct: async (product: Product) => {
@@ -63,18 +86,36 @@ export const DataService = {
     }
     const ref = doc(db, 'products', product.id);
     const { id, ...data } = product;
-    await updateDoc(ref, data);
+    await updateDoc(ref, cleanPayload(data));
   },
 
-  seedProducts: async () => {
-      if(!db) return;
-      const batch = writeBatch(db);
-      INITIAL_PRODUCTS.forEach(p => {
-          const {id, ...data} = p;
-          const ref = doc(collection(db, 'products'));
-          batch.set(ref, data);
-      });
-      await batch.commit();
+  seedProducts: async (): Promise<boolean> => {
+      if(!db) return false;
+      
+      try {
+          const batch = writeBatch(db);
+          
+          // 1. Cargar Productos con sus IDs originales (para mantener consistencia)
+          INITIAL_PRODUCTS.forEach(p => {
+              const {id, ...data} = p;
+              const ref = doc(db, 'products', id); // Usamos 'p1', 'p2' como ID del documento
+              batch.set(ref, cleanPayload(data));
+          });
+
+          // 2. Cargar Activos Fijos también
+          INITIAL_ASSETS.forEach(a => {
+              const {id, ...data} = a;
+              const ref = doc(db, 'assets', id);
+              batch.set(ref, cleanPayload(data));
+          });
+
+          await batch.commit();
+          console.log("Base de datos inicializada correctamente.");
+          return true;
+      } catch (error) {
+          console.error("Error al sembrar datos:", error);
+          return false;
+      }
   },
 
   // --- SALES ---
@@ -119,7 +160,7 @@ export const DataService = {
     const { id, ...saleData } = sale;
     
     // 1. Add Sale
-    await addDoc(collection(db, 'sales'), saleData);
+    await addDoc(collection(db, 'sales'), cleanPayload(saleData));
 
     // 2. Update Stock
     products.forEach(p => {
@@ -175,7 +216,7 @@ export const DataService = {
           return;
       }
       const { id, ...data } = order;
-      await addDoc(collection(db, 'whatsapp_orders'), data);
+      await addDoc(collection(db, 'whatsapp_orders'), cleanPayload(data));
   },
 
   updateWhatsAppStatus: async (orderId: string, status: OrderStatus) => {

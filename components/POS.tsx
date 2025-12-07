@@ -125,11 +125,7 @@ const POS: React.FC<POSProps> = ({
                         if (product) {
                             playBeep();
                             addToCart(product);
-                            // Optional: Close scanner on success? 
-                            // setIsCameraScannerOpen(false); 
-                            // Better: Show a small toast inside modal and keep scanning
                         } else {
-                            // Code scanned but product not found
                             console.log("Producto no encontrado:", decodedText);
                         }
                         
@@ -154,7 +150,7 @@ const POS: React.FC<POSProps> = ({
             }
         };
     }
-  }, [isCameraScannerOpen, products]); // Re-bind if products change, but be careful not to restart scanner unnecessarily. 
+  }, [isCameraScannerOpen, products]);
 
   useEffect(() => {
     if (isCheckoutOpen) {
@@ -314,7 +310,7 @@ const POS: React.FC<POSProps> = ({
     // --- INTEGRACIÓN KDS (Cocina) ---
     // Enviar pedido automáticamente a cocina
     KitchenService.addOrder({
-        tableId: customerName || 'Mostrador', // Si fuera un restaurante, aquí va el # de mesa
+        tableId: customerName || 'Mostrador', 
         items: cart.map(item => ({ name: item.name, quantity: item.quantity })),
         userId: currentUser.id
     });
@@ -348,31 +344,46 @@ const POS: React.FC<POSProps> = ({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    // Validar y parsear números con seguridad (evitar NaN)
+    const price = parseFloat(formData.get('price') as string);
+    const cost = parseFloat(formData.get('cost') as string);
+    const stock = parseInt(formData.get('stock') as string);
+    const minStock = parseInt(formData.get('minStock') as string);
+    
+    // Validar categoría
+    const categoryInput = formData.get('category') as string;
+    const isValidCategory = CATEGORIES.includes(categoryInput as ProductCategory);
+
     const productData: Product = {
       id: editingProduct ? editingProduct.id : Math.random().toString(36).substr(2, 9),
       name: formData.get('name') as string,
       barcode: formData.get('barcode') as string || Math.random().toString(36).substr(2, 6).toUpperCase(),
-      price: parseFloat(formData.get('price') as string) || 0,
-      cost: parseFloat(formData.get('cost') as string) || 0,
-      stock: parseInt(formData.get('stock') as string) || 0,
-      minStock: parseInt(formData.get('minStock') as string) || 5,
-      category: formData.get('category') as any,
+      price: isNaN(price) ? 0 : price,
+      cost: isNaN(cost) ? 0 : cost,
+      stock: isNaN(stock) ? 0 : stock,
+      minStock: isNaN(minStock) ? 5 : minStock,
+      category: isValidCategory ? (categoryInput as ProductCategory) : 'Otro',
       unit: formData.get('unit') as string || 'unid',
-      image: imageBase64 || editingProduct?.image
+      image: imageBase64 || editingProduct?.image || '' // Ensure string, not undefined
     };
 
-    if (editingProduct) {
-        onUpdateProduct(productData);
-    } else {
-        onAddProduct(productData);
-        if (window.confirm(`Producto "${productData.name}" creado. ¿Añadir al carrito actual?`)) {
-            addToCart(productData);
+    try {
+        if (editingProduct) {
+            onUpdateProduct(productData);
+            alert("Producto actualizado correctamente.");
+        } else {
+            onAddProduct(productData);
+            if (window.confirm(`Producto "${productData.name}" guardado. ¿Deseas añadirlo al carrito de esta venta?`)) {
+                addToCart(productData);
+            }
         }
+        setIsProductModalOpen(false);
+        setEditingProduct(null);
+        setImageBase64('');
+    } catch (error) {
+        console.error("Error saving product:", error);
+        alert("Hubo un error al guardar el producto. Revisa la consola.");
     }
-
-    setIsProductModalOpen(false);
-    setEditingProduct(null);
-    setImageBase64('');
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -386,7 +397,6 @@ const POS: React.FC<POSProps> = ({
     }
   };
 
-  // --- File Import Handler ---
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -400,7 +410,6 @@ const POS: React.FC<POSProps> = ({
     }
   };
 
-  // --- Product Filtering ---
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.category.toLowerCase().includes(searchTerm.toLowerCase())

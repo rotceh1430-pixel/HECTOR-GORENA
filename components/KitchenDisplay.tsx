@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { KitchenService } from '../services/kitchenService';
 import { KitchenOrder } from '../types';
-import { Clock, CheckCircle, Utensils, Flame, ChefHat } from 'lucide-react';
+import { Clock, CheckCircle, Utensils, Flame, ChefHat, QrCode, X, Printer, ExternalLink } from 'lucide-react';
 
 const KitchenDisplay: React.FC = () => {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
+  // Definimos las 6 mesas fijas
+  const TABLES = [1, 2, 3, 4, 5, 6];
 
   // B. La Magia del Tiempo Real (onSnapshot simulation)
   useEffect(() => {
@@ -38,6 +42,18 @@ const KitchenDisplay: React.FC = () => {
     return Math.floor(diff / 60000);
   };
 
+  const generateQrUrl = (tableId: number) => {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const params = `?view=customer&table=${tableId}`;
+      // Usamos la API de goqr.me o qrserver para generar la imagen
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(baseUrl + params)}`;
+  };
+
+  const openTableLink = (tableId: number) => {
+      const url = `${window.location.origin}${window.location.pathname}?view=customer&table=${tableId}`;
+      window.open(url, '_blank');
+  };
+
   return (
     <div className="h-full bg-gray-100 p-4 overflow-hidden flex flex-col">
       <div className="flex justify-between items-center mb-6">
@@ -45,9 +61,17 @@ const KitchenDisplay: React.FC = () => {
           <ChefHat className="w-8 h-8 text-coffee-600" />
           Pedidos de Mesa
         </h2>
-        <div className="text-sm text-gray-500 flex gap-4">
-            <span className="flex items-center gap-2"><div className="w-3 h-3 bg-white border border-red-500 rounded-full"></div> Pendientes: {pendingOrders.length}</span>
-            <span className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 rounded-full"></div> Entregados: {deliveredOrders.length}</span>
+        <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setIsQrModalOpen(true)}
+                className="bg-coffee-600 hover:bg-coffee-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm flex items-center gap-2 transition-colors"
+            >
+                <QrCode className="w-5 h-5" /> Ver QRs de Mesas (1-6)
+            </button>
+            <div className="text-sm text-gray-500 flex gap-4 border-l pl-4 border-gray-300">
+                <span className="flex items-center gap-2"><div className="w-3 h-3 bg-white border border-red-500 rounded-full"></div> Pendientes: {pendingOrders.length}</span>
+                <span className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 rounded-full"></div> Entregados: {deliveredOrders.length}</span>
+            </div>
         </div>
       </div>
 
@@ -133,6 +157,60 @@ const KitchenDisplay: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* --- MODAL QRs DE MESAS --- */}
+      {isQrModalOpen && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-white rounded-2xl w-full max-w-4xl p-8 shadow-2xl relative my-8">
+                <button 
+                    onClick={() => setIsQrModalOpen(false)} 
+                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-all"
+                >
+                    <X className="w-6 h-6" />
+                </button>
+                
+                <div className="mb-8 text-center">
+                    <h3 className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
+                        <QrCode className="w-8 h-8 text-coffee-600" />
+                        Códigos QR por Mesa
+                    </h3>
+                    <p className="text-gray-500 mt-2">
+                        Imprime estos códigos y pégalos en las mesas. Los clientes podrán escanearlos para ver el menú y hacer pedidos directos a cocina.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {TABLES.map(tableId => (
+                        <div key={tableId} className="bg-gray-50 border border-gray-200 rounded-xl p-6 flex flex-col items-center shadow-sm hover:shadow-md transition-shadow">
+                            <div className="bg-white p-2 rounded-lg border border-gray-100 mb-4">
+                                <img 
+                                    src={generateQrUrl(tableId)} 
+                                    alt={`QR Mesa ${tableId}`}
+                                    className="w-40 h-40"
+                                />
+                            </div>
+                            <h4 className="text-xl font-bold text-coffee-800 mb-2">MESA {tableId}</h4>
+                            <button 
+                                onClick={() => openTableLink(tableId)}
+                                className="text-sm text-coffee-600 hover:text-coffee-800 hover:underline flex items-center gap-1"
+                            >
+                                <ExternalLink className="w-3 h-3" /> Probar enlace
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="mt-8 flex justify-center border-t border-gray-100 pt-6">
+                    <button 
+                        onClick={() => window.print()} 
+                        className="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors shadow-lg"
+                    >
+                        <Printer className="w-5 h-5" /> Imprimir esta página
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

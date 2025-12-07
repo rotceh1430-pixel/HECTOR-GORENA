@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Layout from './components/Layout';
@@ -8,6 +9,7 @@ import Assets from './components/Assets';
 import WhatsAppOrders from './components/WhatsAppOrders';
 import KitchenDisplay from './components/KitchenDisplay';
 import CustomerMenu from './components/CustomerMenu';
+import MenuManager from './components/MenuManager'; // Import new component
 import { User, Product, Asset, Sale, Role, WhatsAppOrder, OrderStatus } from './types';
 import { DataService } from './services/dataService';
 import { db } from './services/firebaseConfig';
@@ -52,16 +54,6 @@ const App: React.FC = () => {
     };
     window.addEventListener('firebase_error', handleFirebaseError);
 
-    // Only subscribe if not in customer mode (or even in customer mode we need products)
-    if (!db) {
-        // Fallback for when API keys are missing in demo
-        setProducts(INITIAL_PRODUCTS);
-        setSales(MOCK_SALES);
-        setAssets(INITIAL_ASSETS);
-        setLoading(false);
-        return () => window.removeEventListener('firebase_error', handleFirebaseError);
-    }
-
     const unsubProducts = DataService.subscribeProducts(setProducts);
     const unsubSales = DataService.subscribeSales(setSales);
     const unsubAssets = DataService.subscribeAssets(setAssets);
@@ -105,13 +97,25 @@ const App: React.FC = () => {
     localStorage.removeItem('currentView');
   };
 
-  const handleSystemUpdate = () => {
+  const handleSystemUpdate = async () => {
+    if (!db) {
+        alert("Modo Offline: No hay conexión a base de datos en la nube.");
+        return;
+    }
+
     if (products.length === 0) {
-        if(window.confirm("¿Deseas inicializar la base de datos en la nube con los productos de ejemplo?")) {
-            DataService.seedProducts();
+        const confirm = window.confirm("La base de datos está vacía.\n\n¿Deseas cargar AUTOMÁTICAMENTE los productos y activos de ejemplo?");
+        
+        if(confirm) {
+            const success = await DataService.seedProducts();
+            if (success) {
+                alert("✅ Datos cargados correctamente. El sistema se actualizará en unos segundos.");
+            } else {
+                alert("❌ Error al cargar datos.\n\nEs probable que sea un problema de PERMISOS.\n\nAsegúrate de que tus 'Reglas' en Firestore estén en 'Modo de prueba' o permitan lectura/escritura.");
+            }
         }
     } else {
-        alert("El sistema está conectado a la nube y sincronizado.");
+        alert("✅ El sistema está conectado a la nube y sincronizado.");
     }
   };
 
@@ -157,9 +161,7 @@ const App: React.FC = () => {
       customerName: order.customerName,
       documentType: 'RECIBO'
     };
-    // Add sale and update stock via DataService
     DataService.addSale(newSale, products);
-    // Mark order as delivered
     DataService.updateWhatsAppStatus(order.id, 'ENTREGADO');
     alert(`Pedido de ${order.customerName} registrado y sincronizado en la nube.`);
   };
@@ -218,6 +220,11 @@ const App: React.FC = () => {
           onExportData={handleExportData}
           onImportData={handleImportData}
         />
+      )}
+      
+      {/* New Menu Manager View */}
+      {currentView === 'menu_manager' && (currentUser.role === Role.ADMIN || currentUser.role === Role.ALMACEN) && (
+        <MenuManager products={products} onUpdateProduct={handleUpdateProduct} />
       )}
 
       {currentView === 'kitchen' && (currentUser.role === Role.ADMIN || currentUser.role === Role.CAJERO) && (

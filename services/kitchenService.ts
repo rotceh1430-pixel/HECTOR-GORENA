@@ -9,9 +9,25 @@ export const KitchenService = {
   subscribeToOrders: (callback: (orders: KitchenOrder[]) => void) => {
     if (!db) {
         // Fallback for demo without keys
-        const stored = localStorage.getItem(COLLECTION_NAME);
-        callback(stored ? JSON.parse(stored) : []);
-        return () => {};
+        const loadLocal = () => {
+            const stored = localStorage.getItem(COLLECTION_NAME);
+            callback(stored ? JSON.parse(stored) : []);
+        };
+        loadLocal();
+
+        // Listener for same-tab updates
+        window.addEventListener('kitchen_orders_updated', loadLocal);
+        
+        // Listener for cross-tab updates (important for Customer QR tab -> Kitchen Tab)
+        const storageListener = (e: StorageEvent) => {
+            if (e.key === COLLECTION_NAME) loadLocal();
+        };
+        window.addEventListener('storage', storageListener);
+
+        return () => {
+            window.removeEventListener('kitchen_orders_updated', loadLocal);
+            window.removeEventListener('storage', storageListener);
+        };
     }
 
     // Query: Get all pending orders OR delivered orders from the last 12 hours (simplified to last 50 for demo)

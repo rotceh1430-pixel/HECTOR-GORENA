@@ -25,24 +25,11 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
 
   // --- Menu Sharing Logic ---
   const handleShareMenu = () => {
-    const availableProducts = products.filter(p => p.stock > 0);
+    // Generate the link to the customer view
+    const menuLink = `${window.location.origin}${window.location.pathname}?view=customer&table=DELIVERY`;
     
-    let menuText = "👋 *¡Hola! Aquí tienes nuestro menú de hoy:*\n\n";
-    
-    // Group by category for better UX
-    const categories = Array.from(new Set(availableProducts.map(p => p.category)));
-    
-    categories.forEach(cat => {
-      menuText += `*${cat}*\n`;
-      availableProducts
-        .filter(p => p.category === cat)
-        .forEach(p => {
-          menuText += `• ${p.name}: Bs ${p.price.toFixed(2)}\n`;
-        });
-      menuText += "\n";
-    });
-
-    menuText += "📍 _Haz tu pedido respondiendo a este mensaje._";
+    // Create an attractive message
+    const menuText = `☕ *DULCE MIMO* 🍪\n\n¡Hola! Te invito a ver nuestro *Menú Digital*.\n\nPuedes ver fotos, precios y realizar tu pedido directamente aquí:\n👇👇👇\n${menuLink}\n\n_¡Esperamos tu pedido!_`;
 
     const url = `https://wa.me/?text=${encodeURIComponent(menuText)}`;
     window.open(url, '_blank');
@@ -119,7 +106,7 @@ const WhatsAppOrders: React.FC<WhatsAppOrdersProps> = ({
             onClick={handleShareMenu}
             className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-sm transition-all"
           >
-            <Share2 className="w-4 h-4" /> Compartir Menú
+            <Share2 className="w-4 h-4" /> Compartir Link Menú
           </button>
           <button 
             onClick={() => setIsModalOpen(true)}

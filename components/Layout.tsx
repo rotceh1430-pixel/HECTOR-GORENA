@@ -1,6 +1,7 @@
+
 import React, { ReactNode } from 'react';
 import { User, Role } from '../types';
-import { LayoutDashboard, ShoppingCart, Package, HardDrive, LogOut, Menu, MessageCircle, ChefHat } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, HardDrive, LogOut, Menu, MessageCircle, ChefHat, BookOpen } from 'lucide-react';
 
 interface LayoutProps {
   currentUser: User;
@@ -52,6 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ currentUser, currentView, onChangeView,
         <nav className="flex-1 space-y-2">
           <NavItem view="dashboard" icon={LayoutDashboard} label="Dashboard" roles={[Role.ADMIN]} />
           <NavItem view="pos" icon={ShoppingCart} label="Punto de Venta" roles={[Role.ADMIN, Role.CAJERO]} />
+          <NavItem view="menu_manager" icon={BookOpen} label="Menú Cafetería" roles={[Role.ADMIN, Role.ALMACEN]} />
           <NavItem view="kitchen" icon={ChefHat} label="Pedidos de Mesa" roles={[Role.ADMIN, Role.CAJERO]} />
           <NavItem view="whatsapp" icon={MessageCircle} label="Pedidos WA" roles={[Role.ADMIN, Role.CAJERO, Role.ALMACEN]} />
           <NavItem view="inventory" icon={Package} label="Inventario" roles={[Role.ADMIN, Role.ALMACEN, Role.CAJERO]} />
@@ -95,6 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ currentUser, currentView, onChangeView,
                     <nav className="flex-1 space-y-2 mt-12">
                         <NavItem view="dashboard" icon={LayoutDashboard} label="Dashboard" roles={[Role.ADMIN]} />
                         <NavItem view="pos" icon={ShoppingCart} label="Ventas" roles={[Role.ADMIN, Role.CAJERO]} />
+                        <NavItem view="menu_manager" icon={BookOpen} label="Menú Cafetería" roles={[Role.ADMIN, Role.ALMACEN]} />
                         <NavItem view="kitchen" icon={ChefHat} label="Pedidos de Mesa" roles={[Role.ADMIN, Role.CAJERO]} />
                         <NavItem view="whatsapp" icon={MessageCircle} label="Pedidos WA" roles={[Role.ADMIN, Role.CAJERO, Role.ALMACEN]} />
                         <NavItem view="inventory" icon={Package} label="Inventario" roles={[Role.ADMIN, Role.ALMACEN, Role.CAJERO]} />

@@ -1,3 +1,4 @@
+
 export enum Role {
   ADMIN = 'ADMIN',
   CAJERO = 'CAJERO',
@@ -31,6 +32,7 @@ export interface Product {
   category: ProductCategory;
   unit: string;
   image?: string; // Base64 or URL
+  displayOrder?: number; // New field for custom sorting
 }
 
 export interface CartItem extends Product {
